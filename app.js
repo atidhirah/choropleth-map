@@ -28,6 +28,15 @@ const drawMap = (svg, values) => {
   const countryData = topojson.feature(values[1], values[1].objects.counties)
     .features;
   console.log(eduData, countryData);
+
+  // Start draw the map
+  svg
+    .selectAll("path")
+    .data(countryData)
+    .enter()
+    .append("path")
+    .attr("class", "county")
+    .attr("d", d3.geoPath());
 };
 
 const drawError = (svg) => {
