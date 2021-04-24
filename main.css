@@ -31,3 +31,9 @@ h1 {
   top: 0;
   left: 0;
 }
+
+.states {
+  fill: none;
+  stroke: white;
+  stroke-width: 1px;
+}

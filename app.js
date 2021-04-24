@@ -7,56 +7,121 @@ document.addEventListener("DOMContentLoaded", () => {
     "https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json",
   ];
 
-  // Get the canvas
-  const svg = d3.select("#canvas");
-
   // Get the data required
   Promise.all(files.map((url) => d3.json(url)))
     .then((values) => {
       // Start draw the map when fetching is success
-      drawMap(svg, values);
+      drawMap(values);
     })
     .catch((error) => {
       // Draw error message if fetching is fail
       console.log(error);
-      drawError(svg);
+      drawError();
     });
 });
 
-const drawMap = (svg, data) => {
+const drawMap = (data) => {
   const eduData = data[0];
-  const countryData = topojson.feature(data[1], data[1].objects.counties)
-    .features;
-
-  console.log(eduData);
+  const mapData = data[1];
 
   // Color will divide into 8 categories
   const minPercentage = d3.min(eduData, (d) => d["bachelorsOrHigher"]);
   const maxPercentage = d3.max(eduData, (d) => d["bachelorsOrHigher"]);
   const diff = maxPercentage - minPercentage;
+  const domainPercentage = d3.range(minPercentage, maxPercentage, diff / 8);
   const colorScale = d3
     .scaleThreshold()
-    .domain(d3.range(minPercentage, maxPercentage, diff / 8))
+    .domain(domainPercentage)
     .range(d3.schemeGreens[9]);
 
   // Start draw the map
+  const svg = d3.select("#canvas");
+  const [w, h] = [parseInt(svg.style("width")), parseInt(svg.style("height"))];
+  console.log(w, h);
+
   svg
+    .append("g")
+    .attr("class", "counties")
     .selectAll("path")
-    .data(countryData)
+    .data(topojson.feature(mapData, mapData.objects.counties).features)
     .enter()
     .append("path")
-    .attr("class", "county")
-    .attr("d", d3.geoPath())
-    .attrs((d) => getCountyData(d.id, eduData, colorScale))
+    .attrs((d) => setupAttributes(d.id, eduData, colorScale))
     .on("mousemove", (e, d) => onMouseMove(e, d.id, eduData))
     .on("mouseout", (e, d) => onMouseOut(e, d.id));
+
+  // Add some separator between states on the map with line
+  svg
+    .append("path")
+    .datum(topojson.mesh(mapData, mapData.objects.states, (a, b) => a !== b))
+    .attr("class", "states")
+    .attr("d", d3.geoPath());
+
+  // Draw the legend
+  const x = d3
+    .scaleLinear()
+    .domain([minPercentage, maxPercentage])
+    .range([0, 200]);
+
+  const legend = svg
+    .append("g")
+    .attrs({ id: "legend", transform: `translate(${(2 * w) / 3}, 20)` });
+
+  legend
+    .selectAll("rect")
+    .data(
+      colorScale.range().map((clr) => {
+        // Change clr into its value limit
+        clr = colorScale.invertExtent(clr);
+        console.log(clr);
+        // If its < lowest limit
+        if (clr[0] == undefined) {
+          clr[0] = x.domain()[0];
+        }
+
+        // If its > highest limit
+        if (clr[1] == undefined) {
+          clr[1] = x.domain()[1];
+        }
+
+        return clr;
+      })
+    )
+    .enter()
+    .append("rect")
+    .attrs({
+      height: 10,
+      width: (d) => x(d[1]) - x(d[0]),
+      x: (d) => x(d[0]),
+      fill: (d) => colorScale(d[0]),
+    });
+
+  legend.append("text").attrs({
+    x: x.range()[0],
+    y: -10,
+    fill: "white",
+    "text-anchor": "start",
+  });
+
+  legend
+    .call(
+      d3
+        .axisBottom(x)
+        .tickSize(12)
+        .tickFormat((x) => Math.round(x) + "%")
+        .tickValues(colorScale.domain())
+    )
+    .select(".domain")
+    .remove();
 };
 
-const getCountyData = (id, eduData, colorScale) => {
+const setupAttributes = (id, eduData, colorScale) => {
   let county = eduData.find((d) => d["fips"] === id);
   let [fips, percentage] = [county["fips"], county["bachelorsOrHigher"]];
 
   return {
+    class: "county",
+    d: d3.geoPath(),
     "data-fips": fips,
     "data-education": percentage,
     fill: colorScale(percentage),
@@ -71,6 +136,7 @@ const onMouseMove = (e, id, eduData) => {
     .style("stroke-width", "2px");
 
   d3.select("#tooltip")
+    .attr("data-education", county.bachelorsOrHigher)
     .style("display", "inline-block")
     .style("top", e.pageY - 50 + "px")
     .style("left", e.pageX - 30 + "px")
@@ -84,7 +150,8 @@ const onMouseOut = (e) => {
   d3.select("#tooltip").style("display", "none");
 };
 
-const drawError = (svg) => {
+const drawError = () => {
+  const svg = d3.select("#canvas");
   svg
     .append("text")
     .attr("x", parseInt(svg.style("width")) / 2)
