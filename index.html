@@ -4,15 +4,26 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- D3 -->
     <script src="https://d3js.org/d3.v6.js"></script>
+    <!-- D3 selection-multi -->
+    <script src="https://d3js.org/d3-selection-multi.v1.min.js"></script>
+    <!-- Topojson -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
     <link rel="stylesheet" href="./main.css" />
     <title>Choropleth Map</title>
   </head>
   <body>
     <h1 id="title">United States Educational Attainment</h1>
+    <p id="description">
+      Percentage of adults age 25 and older with a bachelor's degree or higher
+      (2010-2014)
+    </p>
     <svg id="canvas"></svg>
+    <svg id="legend"></svg>
+    <div id="tooltip"></div>
 
     <script src="./app.js"></script>
+    <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
   </body>
 </html>

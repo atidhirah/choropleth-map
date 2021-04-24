@@ -18,7 +18,16 @@ h1 {
 }
 
 #canvas {
-  background-color: wheat;
   min-width: 1000px;
   min-height: 600px;
+}
+
+#tooltip {
+  background-color: rgba(245, 245, 245, 0.8);
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
 }

@@ -18,16 +18,26 @@ document.addEventListener("DOMContentLoaded", () => {
     })
     .catch((error) => {
       // Draw error message if fetching is fail
+      console.log(error);
       drawError(svg);
     });
 });
 
-const drawMap = (svg, values) => {
-  const eduData = values[0];
-  // Change country data into geoJSON format
-  const countryData = topojson.feature(values[1], values[1].objects.counties)
+const drawMap = (svg, data) => {
+  const eduData = data[0];
+  const countryData = topojson.feature(data[1], data[1].objects.counties)
     .features;
-  console.log(eduData, countryData);
+
+  console.log(eduData);
+
+  // Color will divide into 8 categories
+  const minPercentage = d3.min(eduData, (d) => d["bachelorsOrHigher"]);
+  const maxPercentage = d3.max(eduData, (d) => d["bachelorsOrHigher"]);
+  const diff = maxPercentage - minPercentage;
+  const colorScale = d3
+    .scaleThreshold()
+    .domain(d3.range(minPercentage, maxPercentage, diff / 8))
+    .range(d3.schemeGreens[9]);
 
   // Start draw the map
   svg
@@ -36,7 +46,42 @@ const drawMap = (svg, values) => {
     .enter()
     .append("path")
     .attr("class", "county")
-    .attr("d", d3.geoPath());
+    .attr("d", d3.geoPath())
+    .attrs((d) => getCountyData(d.id, eduData, colorScale))
+    .on("mousemove", (e, d) => onMouseMove(e, d.id, eduData))
+    .on("mouseout", (e, d) => onMouseOut(e, d.id));
+};
+
+const getCountyData = (id, eduData, colorScale) => {
+  let county = eduData.find((d) => d["fips"] === id);
+  let [fips, percentage] = [county["fips"], county["bachelorsOrHigher"]];
+
+  return {
+    "data-fips": fips,
+    "data-education": percentage,
+    fill: colorScale(percentage),
+  };
+};
+
+const onMouseMove = (e, id, eduData) => {
+  let county = eduData.find((d) => d["fips"] === id);
+
+  d3.select(e.currentTarget)
+    .style("stroke", "blue")
+    .style("stroke-width", "2px");
+
+  d3.select("#tooltip")
+    .style("display", "inline-block")
+    .style("top", e.pageY - 50 + "px")
+    .style("left", e.pageX - 30 + "px")
+    .html(
+      `<p>${county["area_name"]}, ${county.state}: ${county.bachelorsOrHigher} %</p>`
+    );
+};
+
+const onMouseOut = (e) => {
+  d3.select(e.currentTarget).style("stroke", "none");
+  d3.select("#tooltip").style("display", "none");
 };
 
 const drawError = (svg) => {
@@ -44,6 +89,6 @@ const drawError = (svg) => {
     .append("text")
     .attr("x", parseInt(svg.style("width")) / 2)
     .attr("y", parseInt(svg.style("height")) / 2)
-    .attr("text-anchor", "middle")
+    .attr("text-anchor", "middle") // Centering text
     .html("Something went wrong!");
 };
